@@ -19,5 +19,5 @@ jobs:
       - uses: actions/upload-artifact@v1
         if: failure()
         with:
-          name: allure-report
-          path: allure-report
+          name: logs
+          path: logs
