@@ -1,3 +1,5 @@
+const allure = require('allure-commandline');
+
 exports.config = {
   exclude: [],
   maxInstances: 10,
@@ -9,24 +11,20 @@ exports.config = {
   // Default timeout in milliseconds for request
   // if browser driver or grid doesn't send response
   connectionRetryTimeout: 120000,
-  //
   // Default request retries count
   connectionRetryCount: 3,
   framework: 'mocha',
-  //
-  // The number of times to retry the entire specfile when it fails as a whole
-  // specFileRetries: 1,
-  //
-  // Delay in seconds between the spec file retry attempts
-  // specFileRetriesDelay: 0,
-  //
-  // Whether or not retried spec files should be retried immediately or deferred to the end of the queue
-  // specFileRetriesDeferred: false,
-  //
-  // Test reporter for stdout.
-  // The only one supported by default is 'dot'
-  // see also: https://webdriver.io/docs/dot-reporter
-  reporters: ['spec'],
+  reporters: [
+    'spec',
+    [
+      'allure',
+      {
+        outputDir: 'allure-results',
+        disableWebdriverStepsReporting: false,
+        disableWebdriverScreenshotsReporting: false,
+      },
+    ],
+  ],
   mochaOpts: {
     ui: 'bdd',
     timeout: 60000,
@@ -125,8 +123,11 @@ exports.config = {
    * @param {boolean} result.passed    true if test has passed, otherwise false
    * @param {object}  result.retries   informations to spec related retries, e.g. `{ attempts: 0, limit: 0 }`
    */
-  // afterTest: function(test, context, { error, result, duration, passed, retries }) {
-  // },
+  afterTest: async function (test, context, { error }) {
+    if (error) {
+      await driver.takeScreenshot();
+    }
+  },
 
   /**
    * Hook that gets executed after the suite has ended
@@ -168,8 +169,24 @@ exports.config = {
    * @param {Array.<Object>} capabilities list of capabilities details
    * @param {<Object>} results object containing test results
    */
-  // onComplete: function(exitCode, config, capabilities, results) {
-  // },
+  onComplete: function () {
+    const reportError = new Error('Could not generate Allure report');
+    const generation = allure(['generate', 'allure-results', '--clean']);
+    return new Promise((resolve, reject) => {
+      const generationTimeout = setTimeout(() => reject(reportError), 5000);
+
+      generation.on('exit', function (exitCode) {
+        clearTimeout(generationTimeout);
+
+        if (exitCode !== 0) {
+          return reject(reportError);
+        }
+
+        console.log('Allure report successfully generated');
+        resolve();
+      });
+    });
+  },
   /**
    * Gets executed when a refresh happens.
    * @param {string} oldSessionId session ID of the old session

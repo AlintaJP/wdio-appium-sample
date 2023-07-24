@@ -5,7 +5,7 @@ config.runner = 'local';
 
 config.port = 4723;
 
-config.specs = ['./test/specs/ios/ios-todo-item*.js'];
+config.specs = [path.join(process.cwd(), './test/specs/ios/ios-todo-item*.js')];
 
 config.capabilities = [
   {
